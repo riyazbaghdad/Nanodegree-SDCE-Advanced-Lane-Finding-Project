@@ -73,14 +73,14 @@ class AdvancedLaneLineDetector:
         warped_frame = self.apply_perspective_transform(preprocessed_frame, src_pts, dst_pts)
         left_lane, right_lane, out_img = self.detect_lane_lines_pixels(warped_frame)
         left_curve, right_curve, center_offset = self.measure_curvature(left_lane, right_lane)
-        self.draw_lane_lines(out_img, left_lane, right_lane)
-        regio_img = self.draw_lane_lines_regions(warped_frame, left_lane, right_lane)
         lane_area_img = self.draw_lane_area(out_img, undist_img, left_lane, right_lane)
-        plt.imshow(out_img)
-        plt.imshow(regio_img)
-        plt.imshow(lane_area_img)
-        plt.show()
+        processed_frame = self.draw_lane_curvature_text(lane_area_img, left_curve, right_curve, center_offset)
         print(left_curve,right_curve,center_offset)
+
+        self.previous_left_lane_line = left_lane
+        self.previous_right_lane_line = right_lane
+
+        return processed_frame
 
     def undistort_img(self, img):
         return cv2.undistort(img, mtx, dist, None, mtx)
@@ -144,8 +144,9 @@ class AdvancedLaneLineDetector:
 
         # Step through the windows one by one
         if self.previous_left_lane_line is None and self.previous_right_lane_line is None:
-            self.find_pixels_on_lanes(binary_warped, window_height, leftx_current, rightx_current, nonzerox, nonzeroy,
-                                      left_lane_inds, right_lane_inds, out_img)
+            left_lane_inds, right_lane_inds = self.find_pixels_on_lanes(binary_warped, window_height,
+                                                leftx_current, rightx_current, nonzerox, nonzeroy,
+                                                left_lane_inds, right_lane_inds, out_img)
             # Concatenate the arrays of indices (previously was a list of lists of pixels)
             try:
                 left_lane_inds = np.concatenate(left_lane_inds)
@@ -180,7 +181,7 @@ class AdvancedLaneLineDetector:
             non_zero_found_pct = (non_zero_found_left + non_zero_found_right) / total_non_zeros
 
             if non_zero_found_pct < 0.85:
-                self.find_pixels_on_lanes(binary_warped, window_height, leftx_current, rightx_current, nonzerox,
+                left_lane_inds, right_lane_inds = self.find_pixels_on_lanes(binary_warped, window_height, leftx_current, rightx_current, nonzerox,
                                           nonzeroy,
                                           left_lane_inds, right_lane_inds, out_img)
                 non_zero_found_left = np.sum(left_lane_inds)
@@ -250,6 +251,8 @@ class AdvancedLaneLineDetector:
             # Avoids an error if the above is not implemented fully
             pass
 
+        return left_lane_inds, right_lane_inds
+
     def measure_curvature(self, left_lane, right_lane):
         ploty = self.ploty
         y_eval = np.max(ploty)
@@ -282,41 +285,6 @@ class AdvancedLaneLineDetector:
         # Now our radius of curvature is in meters
         return left_curverad, right_curverad, center_offset_real_world_m
 
-    def draw_lane_lines(self, out_img, left_lane, right_lane):
-        # Now draw the lines
-        ploty = np.linspace(0, out_img.shape[0] - 1, out_img.shape[0])
-        pts_left = np.dstack((left_lane.line_fit_x, ploty)).astype(np.int32)
-        pts_right = np.dstack((right_lane.line_fit_x, ploty)).astype(np.int32)
-        cv2.polylines(out_img, pts_left, False, (255, 0, 0), 10)
-        cv2.polylines(out_img, pts_right, False, (0, 255, 0), 10)
-
-    def draw_lane_lines_regions(self, warped_img, left_line, right_line):
-        """
-        Returns an image where the computed left and right lane areas have been drawn on top of the original warped binary image
-        """
-        # Generate a polygon to illustrate the search window area
-        # And recast the x and y points into usable format for cv2.fillPoly()
-        ploty = np.linspace(0, warped_img.shape[0] - 1, warped_img.shape[0])
-
-        left_line_window1 = np.array([np.transpose(np.vstack([left_line.line_fit_x - margin, ploty]))])
-        left_line_window2 = np.array([np.flipud(np.transpose(np.vstack([left_line.line_fit_x + margin,
-                                                                        ploty])))])
-        left_line_pts = np.hstack((left_line_window1, left_line_window2))
-
-        right_line_window1 = np.array([np.transpose(np.vstack([right_line.line_fit_x - margin, ploty]))])
-        right_line_window2 = np.array([np.flipud(np.transpose(np.vstack([right_line.line_fit_x + margin,
-                                                                         ploty])))])
-        right_line_pts = np.hstack((right_line_window1, right_line_window2))
-
-        # Create RGB image from binary warped image
-        region_img = np.dstack((warped_img, warped_img, warped_img)) * 255
-
-        # Draw the lane onto the warped blank image
-        cv2.fillPoly(region_img, np.int_([left_line_pts]), (0, 255, 0))
-        cv2.fillPoly(region_img, np.int_([right_line_pts]), (0, 255, 0))
-
-        return region_img
-
     def draw_lane_area(self, warped_img, undist_img, left_line, right_line):
         """
         Returns an image where the inside of the lane has been colored in bright green
@@ -341,9 +309,37 @@ class AdvancedLaneLineDetector:
 
         return result
 
+    def draw_lane_curvature_text(self, img, left_curvature_meters, right_curvature_meters, center_offset_meters):
+        """
+        Returns an image with curvature information inscribed
+        """
+
+        offset_y = 100
+        offset_x = 100
+
+        template = "{0:17}{1:17}{2:17}"
+        txt_header = template.format("Left Curvature", "Right Curvature", "Center Alignment")
+        print(txt_header)
+        txt_values = template.format("{:.4f}m".format(left_curvature_meters),
+                                     "{:.4f}m".format(right_curvature_meters),
+                                     "{:.4f}m Right".format(center_offset_meters))
+        if center_offset_meters < 0.0:
+            txt_values = template.format("{:.4f}m".format(left_curvature_meters),
+                                         "{:.4f}m".format(right_curvature_meters),
+                                         "{:.4f}m Left".format(math.fabs(center_offset_meters)))
+
+        print(txt_values)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        cv2.putText(img, txt_header, (offset_x, offset_y), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(img, txt_values, (offset_x, offset_y + 50), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
+
+        return img
+
 
 if __name__ == '__main__':
     img_path = "./test_images_undistorted/test3_undistorted.jpg"
     classifier = AdvancedLaneLineDetector()
-    classifier.process_frame(img_path)
+    output = classifier.process_frame(img_path)
+    plt.imshow(output)
+    plt.show()
 
