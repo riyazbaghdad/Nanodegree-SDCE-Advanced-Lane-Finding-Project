@@ -66,8 +66,8 @@ class AdvancedLaneLineDetector:
         self.ym_per_px = self.real_world_lane_size[0] / self.img_dimensions[0]
         self.xm_per_px = self.real_world_lane_size[1] / lane_width
 
-    def process_frame(self, fname):
-        img = mpimg.imread(fname)
+    def process_frame(self, img):
+        #img = mpimg.imread(fname)
         undist_img = self.undistort_img(img)
         preprocessed_frame = self.apply_transformation(undist_img)
         warped_frame = self.apply_perspective_transform(preprocessed_frame, src_pts, dst_pts)
@@ -75,7 +75,7 @@ class AdvancedLaneLineDetector:
         left_curve, right_curve, center_offset = self.measure_curvature(left_lane, right_lane)
         lane_area_img = self.draw_lane_area(out_img, undist_img, left_lane, right_lane)
         processed_frame = self.draw_lane_curvature_text(lane_area_img, left_curve, right_curve, center_offset)
-        print(left_curve,right_curve,center_offset)
+        print(left_curve, right_curve, center_offset)
 
         self.previous_left_lane_line = left_lane
         self.previous_right_lane_line = right_lane
@@ -145,15 +145,10 @@ class AdvancedLaneLineDetector:
         # Step through the windows one by one
         if self.previous_left_lane_line is None and self.previous_right_lane_line is None:
             left_lane_inds, right_lane_inds = self.find_pixels_on_lanes(binary_warped, window_height,
-                                                leftx_current, rightx_current, nonzerox, nonzeroy,
-                                                left_lane_inds, right_lane_inds, out_img)
-            # Concatenate the arrays of indices (previously was a list of lists of pixels)
-            try:
-                left_lane_inds = np.concatenate(left_lane_inds)
-                right_lane_inds = np.concatenate(right_lane_inds)
-            except ValueError:
-                # Avoids an error if the above is not implemented fully
-                pass
+                                                                        leftx_current, rightx_current, nonzerox,
+                                                                        nonzeroy,
+                                                                        left_lane_inds, right_lane_inds)
+
         else:
             # We have already computed the lane lines polynomials from a previous image
             left_lane_inds = ((nonzerox > (self.previous_left_lane_line.polynomial_coeff[0] * (nonzeroy ** 2)
@@ -169,21 +164,16 @@ class AdvancedLaneLineDetector:
                                & (nonzerox < (self.previous_right_lane_line.polynomial_coeff[0] * (nonzeroy ** 2)
                                               + self.previous_right_lane_line.polynomial_coeff[1] * nonzeroy
                                               + self.previous_right_lane_line.polynomial_coeff[2] + margin)))
-            # Concatenate the arrays of indices (previously was a list of lists of pixels)
-            try:
-                left_lane_inds = np.concatenate(left_lane_inds)
-                right_lane_inds = np.concatenate(right_lane_inds)
-            except ValueError:
-                # Avoids an error if the above is not implemented fully
-                pass
+
             non_zero_found_left = np.sum(left_lane_inds)
             non_zero_found_right = np.sum(right_lane_inds)
             non_zero_found_pct = (non_zero_found_left + non_zero_found_right) / total_non_zeros
 
             if non_zero_found_pct < 0.85:
-                left_lane_inds, right_lane_inds = self.find_pixels_on_lanes(binary_warped, window_height, leftx_current, rightx_current, nonzerox,
-                                          nonzeroy,
-                                          left_lane_inds, right_lane_inds, out_img)
+                left_lane_inds, right_lane_inds = self.find_pixels_on_lanes(binary_warped, window_height, leftx_current,
+                                                                            rightx_current, nonzerox,
+                                                                            nonzeroy,
+                                                                            left_lane_inds, right_lane_inds)
                 non_zero_found_left = np.sum(left_lane_inds)
                 non_zero_found_right = np.sum(right_lane_inds)
                 non_zero_found_pct = (non_zero_found_left + non_zero_found_right) / total_non_zeros
@@ -211,24 +201,18 @@ class AdvancedLaneLineDetector:
         return left_lane_line, right_lane_line, out_img
 
     def find_pixels_on_lanes(self, binary_warped, window_height, leftx_current, rightx_current, nonzerox, nonzeroy,
-                             left_lane_inds, right_lane_inds, out_img):
+                             left_lane_inds, right_lane_inds):
         for window in range(nwindows):
             # Identify window boundaries in x and y (and right and left)
             win_y_low = binary_warped.shape[0] - (window + 1) * window_height  # 720 - 80 -- 640
             win_y_high = binary_warped.shape[0] - window * window_height  # 720 - 0 -- 720
-            ### TO-DO: Find the four below boundaries of the window ###
+
             win_xleft_low = leftx_current - margin  # Update this  # base peakLeft - 100
             win_xleft_high = leftx_current + margin  # Update this
             win_xright_low = rightx_current - margin  # Update this
             win_xright_high = rightx_current + margin
 
-            # Draw the windows on the visualization image
-            #cv2.rectangle(out_img, (win_xleft_low, win_y_low),
-             #             (win_xleft_high, win_y_high), (0, 255, 0), 2)
-           # cv2.rectangle(out_img, (win_xright_low, win_y_low),
-                      #    (win_xright_high, win_y_high), (0, 255, 0), 2)
-
-            ### TO-DO: Identify the nonzero pixels in x and y within the window ###
+            # Identify the nonzero pixels in x and y within the window
             good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) &
                               (nonzerox >= win_xleft_low) & (nonzerox < win_xleft_high)).nonzero()[0]
             good_right_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) &
@@ -337,9 +321,19 @@ class AdvancedLaneLineDetector:
 
 
 if __name__ == '__main__':
-    img_path = "./test_images_undistorted/test3_undistorted.jpg"
-    classifier = AdvancedLaneLineDetector()
-    output = classifier.process_frame(img_path)
-    plt.imshow(output)
-    plt.show()
+    import re
+    img_paths = glob.glob("./testimages_set/*.jpg")
+    img_paths.sort(key=lambda f: int(re.sub('\D', '', f)))
 
+    classifier = AdvancedLaneLineDetector()
+    i = 1
+    for img_path in img_paths:
+        img_actual = mpimg.imread(img_path)
+        output = classifier.process_frame(img_actual)
+       # output.savefig("output_processed"+str(i)+'.jpg')
+        plt.imsave("output_processed/" + str(i), output, format="jpg")
+        #cv2.imwrite("output_processed/" + str(i) + ".jpg", output)  # save frame as JPG file
+        i+=1
+        #plt.figure(figsize=(15,10))
+       # plt.imshow(output)
+        #plt.show()
