@@ -1,5 +1,3 @@
-from _curses import nonl
-
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
@@ -7,6 +5,9 @@ import matplotlib.image as mpimg
 import glob
 import pickle
 import math
+import re
+
+# Custom Libs
 import preprocessing_frames
 
 # custom vars
@@ -32,7 +33,7 @@ src_pts = np.array([[210, height_y], [595, 450], [690, 450],
 dst_pts = np.array([[200, height_y], [200, 0],
                     [1000, 0], [1000, height_y]], np.float32)  # Destination points for perspective transform
 
-# HYPERPARAMETERS
+# HYPER-PARAMETERS
 # Choose the number of sliding windows
 nwindows = 9
 # Set the width of the windows +/- margin
@@ -44,9 +45,7 @@ lane_width = 1000 - 200  # 1000 -> right lane position, 200 -> left lane pos. af
 lane_center = (1000 + 200) / 2
 
 
-# Custom functions for preprocessing techniques
-
-
+# Class LaneLine() contains the attributes of the Lane Lines
 class LaneLine:
     def __init__(self):
         self.polynomial_coeff = None
@@ -56,6 +55,7 @@ class LaneLine:
         self.windows = []
 
 
+# Class AdvancedLaneLineDetector() processes the complete Lane Finding Function
 class AdvancedLaneLineDetector:
     def __init__(self):
         self.previous_left_lane_line = None
@@ -67,7 +67,7 @@ class AdvancedLaneLineDetector:
         self.xm_per_px = self.real_world_lane_size[1] / lane_width
 
     def process_frame(self, img):
-        #img = mpimg.imread(fname)
+        # img = mpimg.imread(fname)
         undist_img = self.undistort_img(img)
         preprocessed_frame = self.apply_transformation(undist_img)
         warped_frame = self.apply_perspective_transform(preprocessed_frame, src_pts, dst_pts)
@@ -146,8 +146,7 @@ class AdvancedLaneLineDetector:
         if self.previous_left_lane_line is None and self.previous_right_lane_line is None:
             left_lane_inds, right_lane_inds = self.find_pixels_on_lanes(binary_warped, window_height,
                                                                         leftx_current, rightx_current, nonzerox,
-                                                                        nonzeroy,
-                                                                        left_lane_inds, right_lane_inds)
+                                                                        nonzeroy)
 
         else:
             # We have already computed the lane lines polynomials from a previous image
@@ -172,8 +171,7 @@ class AdvancedLaneLineDetector:
             if non_zero_found_pct < 0.85:
                 left_lane_inds, right_lane_inds = self.find_pixels_on_lanes(binary_warped, window_height, leftx_current,
                                                                             rightx_current, nonzerox,
-                                                                            nonzeroy,
-                                                                            left_lane_inds, right_lane_inds)
+                                                                            nonzeroy)
                 non_zero_found_left = np.sum(left_lane_inds)
                 non_zero_found_right = np.sum(right_lane_inds)
                 non_zero_found_pct = (non_zero_found_left + non_zero_found_right) / total_non_zeros
@@ -200,8 +198,9 @@ class AdvancedLaneLineDetector:
 
         return left_lane_line, right_lane_line, out_img
 
-    def find_pixels_on_lanes(self, binary_warped, window_height, leftx_current, rightx_current, nonzerox, nonzeroy,
-                             left_lane_inds, right_lane_inds):
+    def find_pixels_on_lanes(self, binary_warped, window_height, leftx_current, rightx_current, nonzerox, nonzeroy):
+        left_lane_inds = []
+        right_lane_inds = []
         for window in range(nwindows):
             # Identify window boundaries in x and y (and right and left)
             win_y_low = binary_warped.shape[0] - (window + 1) * window_height  # 720 - 80 -- 640
@@ -321,19 +320,12 @@ class AdvancedLaneLineDetector:
 
 
 if __name__ == '__main__':
-    import re
-    img_paths = glob.glob("./testimages_set/*.jpg")
+    img_paths = glob.glob("./testimages_harder_challenge/*.jpg")
     img_paths.sort(key=lambda f: int(re.sub('\D', '', f)))
-
     classifier = AdvancedLaneLineDetector()
     i = 1
     for img_path in img_paths:
         img_actual = mpimg.imread(img_path)
         output = classifier.process_frame(img_actual)
-       # output.savefig("output_processed"+str(i)+'.jpg')
-        plt.imsave("output_processed/" + str(i), output, format="jpg")
-        #cv2.imwrite("output_processed/" + str(i) + ".jpg", output)  # save frame as JPG file
-        i+=1
-        #plt.figure(figsize=(15,10))
-       # plt.imshow(output)
-        #plt.show()
+        plt.imsave("output_part3/" + str(i), output, format="jpg")
+        i += 1
