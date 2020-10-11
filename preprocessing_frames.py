@@ -63,24 +63,29 @@ class PreprocessingPipeline:
         binary_output = np.copy(bin_out)  # Remove this line
         return binary_output
 
-    def compute_white_yellow_lines(self, hls_img):
+    def compute_white_yellow_lines(self, rgb_img,
+                                       H_yell_min=15, H_yell_max=35,
+                                       L_yell_min=30, L_yell_max=204, S_yell_min=115, S_yell_max=255, H_whit_min=0,
+                                       H_whit_max=255,
+                                       L_whit_min=200, L_whit_max=255, S_whit_min=0, S_whit_max=255):
         """
-        Returns a binary thresholded image produced retaining only white and yellow elements on the picture
-        The provided image should be in RGB format
+        Returns a binary thresholded image containing the white and yellow
+        contents of the image which is mostly targeted for the lanes
         """
+        hls_img = rgb_img
 
         # Compute a binary thresholded image where yellow is isolated from HLS components
         img_hls_yellow_bin = np.zeros_like(hls_img[:, :, 0])
-        img_hls_yellow_bin[((hls_img[:, :, 0] >= 15) & (hls_img[:, :, 0] <= 35))
-                           & ((hls_img[:, :, 1] >= 30) & (hls_img[:, :, 1] <= 204))
-                           & ((hls_img[:, :, 2] >= 115) & (hls_img[:, :, 2] <= 255))
+        img_hls_yellow_bin[((hls_img[:, :, 0] >= H_yell_min) & (hls_img[:, :, 0] <= H_yell_max))
+                           & ((hls_img[:, :, 1] >= L_yell_min) & (hls_img[:, :, 1] <= L_yell_max))
+                           & ((hls_img[:, :, 2] >= S_yell_min) & (hls_img[:, :, 2] <= S_yell_max))
                            ] = 1
 
         # Compute a binary thresholded image where white is isolated from HLS components
         img_hls_white_bin = np.zeros_like(hls_img[:, :, 0])
-        img_hls_white_bin[((hls_img[:, :, 0] >= 0) & (hls_img[:, :, 0] <= 255))
-                          & ((hls_img[:, :, 1] >= 200) & (hls_img[:, :, 1] <= 255))
-                          & ((hls_img[:, :, 2] >= 0) & (hls_img[:, :, 2] <= 255))
+        img_hls_white_bin[((hls_img[:, :, 0] >= H_whit_min) & (hls_img[:, :, 0] <= H_whit_max))
+                          & ((hls_img[:, :, 1] >= L_whit_min) & (hls_img[:, :, 1] <= L_whit_max))
+                          & ((hls_img[:, :, 2] >= S_whit_min) & (hls_img[:, :, 2] <= S_whit_max))
                           ] = 1
 
         # Now combine both

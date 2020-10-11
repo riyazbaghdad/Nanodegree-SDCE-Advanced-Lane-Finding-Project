@@ -52,7 +52,6 @@ class LaneLine:
         self.line_fit_x = None
         self.non_zero_x = []
         self.non_zero_y = []
-        self.windows = []
 
 
 # Class AdvancedLaneLineDetector() processes the complete Lane Finding Function
@@ -327,5 +326,5 @@ if __name__ == '__main__':
     for img_path in img_paths:
         img_actual = mpimg.imread(img_path)
         output = classifier.process_frame(img_actual)
-        plt.imsave("output_part3/" + str(i), output, format="jpg")
+        #plt.imsave("output_part3/" + str(i), output, format="jpg")
         i += 1
