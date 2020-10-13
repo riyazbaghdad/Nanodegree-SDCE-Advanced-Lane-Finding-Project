@@ -300,7 +300,7 @@ class AdvancedLaneLineDetector:
         offset_x = 100
 
         template = "{0:17}{1:17}{2:17}"
-        txt_header = template.format("Left Curvature", "Right Curvature", "Center Alignment")
+        txt_header = template.format("Left Curvature", "Right Curvature", "Center offset and Alignment")
         print(txt_header)
         txt_values = template.format("{:.4f}m".format(left_curvature_meters),
                                      "{:.4f}m".format(right_curvature_meters),
@@ -319,12 +319,12 @@ class AdvancedLaneLineDetector:
 
 
 if __name__ == '__main__':
-    img_paths = glob.glob("./testimages_harder_challenge/*.jpg")
+    img_paths = glob.glob("./testimages_set/*.jpg")
     img_paths.sort(key=lambda f: int(re.sub('\D', '', f)))
     classifier = AdvancedLaneLineDetector()
     i = 1
     for img_path in img_paths:
         img_actual = mpimg.imread(img_path)
         output = classifier.process_frame(img_actual)
-        #plt.imsave("output_part3/" + str(i), output, format="jpg")
+        #plt.imsave("output_processed/" + str(i), output, format="jpg")
         i += 1
