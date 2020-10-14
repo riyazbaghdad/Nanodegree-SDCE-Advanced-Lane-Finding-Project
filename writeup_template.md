@@ -32,6 +32,8 @@ The goals / steps of this project are the following:
 [image6.2]: ./output_images/lane_boxed.jpg "Output2"
 [image6.3]: ./output_images/lane_region.jpg "Output3"
 [image6.4]: ./output_images/247.jpg "Main_Output"
+[image7]: ./output_images/21 "challenge output"
+[image7.1]: ./output_images/43 "challenge output"
 [video1]: ./project_video.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
@@ -204,4 +206,19 @@ Here's a [link to my video result](./output_videos/lanes_project_video.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+Challenges Faced:
+- Obtaining the parameters i.e., the tuning part for the thresholding consumed time, also exploring different color spaces. Thanks some reference online I had an initial approx value for the params.
+- The algorithm works fine with the supplied task video but there are minor discrepencies are still seen, when the vehicle enters different shades of road. It was minimized.
+
+Pipeline failure:
+- The pipeline fails for the challenge video and harder challenge one. The polynomials gets skewed.
+- In the `challenge video`, the lanes are not detected properly meaning, it detects the shadow edge as lanes and not the actual lanes
+- See below:
+
+![alt text][image7]
+
+- Similar results on the `harder challenge video` as well. It fails to detect the lanes.
+
+![alt text][image7.1]
+
+I believe that the pipeline can be improved to make it robust with better parameters. However the pipeline succeeds with the default video. I would continue my work to improve on the challenges video in the future commits.
