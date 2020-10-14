@@ -47,7 +47,13 @@ lane_center = (1000 + 200) / 2
 
 # Class LaneLine() contains the attributes of the Lane Lines
 class LaneLine:
+    """
+     Class LaneLine contains the attributes needed to hold information when processing the Lane detection pipeline
+    """
     def __init__(self):
+        """
+         Constructor of the LaneLine
+        """
         self.polynomial_coeff = None
         self.line_fit_x = None
         self.non_zero_x = []
@@ -56,7 +62,13 @@ class LaneLine:
 
 # Class AdvancedLaneLineDetector() processes the complete Lane Finding Function
 class AdvancedLaneLineDetector:
+    """
+     Class AdvancedLaneLineDetector contains the attributes and the complete methods to process, detect and draw lanes
+    """
     def __init__(self):
+        """
+        Constructor of the AdvancedLaneLineDetector
+        """
         self.previous_left_lane_line = None
         self.previous_right_lane_line = None
         self.img_dimensions = (720, 1280)
@@ -66,7 +78,11 @@ class AdvancedLaneLineDetector:
         self.xm_per_px = self.real_world_lane_size[1] / lane_width
 
     def process_frame(self, img):
-        # img = mpimg.imread(fname)
+        """
+         Basically this is the pipeline, processes, thresholds, detects lanes and overlays on the Input Image
+        :param img: RGB Image
+        :return: Processed Image with the detected lanes, radii and offset texts on them.
+        """
         undist_img = self.undistort_img(img)
         preprocessed_frame = self.apply_transformation(undist_img)
         warped_frame = self.apply_perspective_transform(preprocessed_frame, src_pts, dst_pts)
@@ -82,9 +98,20 @@ class AdvancedLaneLineDetector:
         return processed_frame
 
     def undistort_img(self, img):
+        """
+         Undistorts the Image/Frame
+        :param img: Input Image RGB
+        :return: Undistorted Image
+        """
         return cv2.undistort(img, mtx, dist, None, mtx)
 
     def apply_transformation(self, image):
+        """
+         Processes the Image by performing gradient thresholding and color gradients on the supplied
+         frame.
+        :param image: RGB Image/Frame
+        :return: Thresholded binary image
+        """
         img = np.copy(image)
         proc = preprocessing_frames.PreprocessingPipeline(k_size, sobel_threshold_xy, mag_threshold, dir_threshold)
 
@@ -106,13 +133,28 @@ class AdvancedLaneLineDetector:
         return combined
 
     def apply_perspective_transform(self, img, src, dst):
+        """
+         Performs the perspective transform
+        :param img: image to be warped
+        :param src: Source image points
+        :param dst: destination object points
+        :return: Returns the warped image object
+        """
         return cv2.warpPerspective(img, (cv2.getPerspectiveTransform(src, dst)),
                                    (img.shape[1], img.shape[0]), flags=cv2.INTER_LINEAR)
 
     def fit_polynomial(self, y, x):
+        """
+        Returns the poly fit
+        """
         return np.polyfit(y, x, 2)
 
     def detect_lane_lines_pixels(self, binary_warped):
+        """
+         Detects the lane lines
+        :param binary_warped: warped image
+        :return: detected lane lines and output image
+        """
         # Take a histogram of the bottom half of the image
         histogram = np.sum(binary_warped[binary_warped.shape[0] // 2:, :], axis=0)
         # Create an output image to draw on and visualize the result
@@ -133,10 +175,6 @@ class AdvancedLaneLineDetector:
         # Current positions to be updated later for each window in nwindows
         leftx_current = leftx_base
         rightx_current = rightx_base
-
-        # Create empty lists to receive left and right lane pixel indices
-        left_lane_inds = []
-        right_lane_inds = []
 
         left_lane_line = LaneLine()
         right_lane_line = LaneLine()
@@ -198,6 +236,18 @@ class AdvancedLaneLineDetector:
         return left_lane_line, right_lane_line, out_img
 
     def find_pixels_on_lanes(self, binary_warped, window_height, leftx_current, rightx_current, nonzerox, nonzeroy):
+
+        """
+         Calculates the postive indices for the lanes where the non zero pixels reside. Sliding window approach to
+         evaluate the position of indices at each window
+        :param binary_warped: Input thresholded Image/ Initially the rectangular boxes are drawn
+        :param window_height: Number of windows per image
+        :param leftx_current: position of the left lane at X
+        :param rightx_current: position of the right lane at X
+        :param nonzerox: Non-zero pixels at left lane
+        :param nonzeroy: Non-zero pixels at right lane
+        :return: Indices of the left and right lanes
+        """
         left_lane_inds = []
         right_lane_inds = []
         for window in range(nwindows):
@@ -236,6 +286,12 @@ class AdvancedLaneLineDetector:
         return left_lane_inds, right_lane_inds
 
     def measure_curvature(self, left_lane, right_lane):
+        """
+         Measures the radii of curvature of the lanes and the central offset
+        :param left_lane: Left lane object contains attributes
+        :param right_lane: Right lane object contains attributes
+        :return: Returns the radii of the lanes and offset values in metres
+        """
         ploty = self.ploty
         y_eval = np.max(ploty)
 
@@ -269,7 +325,12 @@ class AdvancedLaneLineDetector:
 
     def draw_lane_area(self, warped_img, undist_img, left_line, right_line):
         """
-        Returns an image where the inside of the lane has been colored in bright green
+            Returns an image where the inside of the lane has been colored in bright green
+        :param warped_img: Processed Image
+        :param undist_img: Actual RGB Image
+        :param left_line: Left line object contains attributes
+        :param right_line: Right lane object contains attributes
+        :return:
         """
         # Create an image to draw the lines on
         color_warp = warped_img
@@ -293,9 +354,13 @@ class AdvancedLaneLineDetector:
 
     def draw_lane_curvature_text(self, img, left_curvature_meters, right_curvature_meters, center_offset_meters):
         """
-        Returns an image with curvature information inscribed
+            Returns an image with curvature information inscribed
+        :param img: Input image
+        :param left_curvature_meters: Left radius in metres
+        :param right_curvature_meters:  Right radius in metres
+        :param center_offset_meters: central offset in metres
+        :return: Image with information inscribed.
         """
-
         offset_y = 100
         offset_x = 100
 

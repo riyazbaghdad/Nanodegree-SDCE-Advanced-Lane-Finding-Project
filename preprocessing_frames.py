@@ -3,13 +3,28 @@ import cv2
 
 
 class PreprocessingPipeline:
+    """
+     Class PreprocessingPipeline performs the gradient and color thresholding
+    """
     def __init__(self, kernel_size, sob_thresh, mag_thresh, dir_thresh):
+        """
+        Constructor PreprocessingPipeline
+        :param kernel_size: kernel size
+        :param sob_thresh: x and y threshold parameter
+        :param mag_thresh: magnitude threshold parameter
+        :param dir_thresh: Directional gradient threshold parameter
+        """
         self.kernel_size = kernel_size
         self.sobel_thresh = sob_thresh
         self.mag_thresh = mag_thresh
         self.dir_thresh = dir_thresh
 
     def abs_sobel_thresh(self, img, orient='x'):
+        """
+         Calculates the "x" and "y" gradients
+        :param img: input image
+        :return: thresholded image
+        """
         # 1) Convert to grayscale
         gimg = (cv2.cvtColor(img, cv2.COLOR_RGB2LAB))[:, :, 0]
         # 2) Take the derivative in x or y given orient = 'x' or 'y'
@@ -27,6 +42,11 @@ class PreprocessingPipeline:
         return mask_sobel
 
     def mag_threshold(self, img):
+        """
+         Calculates the magnitude of gradients
+        :param img: input image
+        :return: thresholded image
+        """
         # Apply the following steps to img
         # 1) Convert to grayscale
         gray = (cv2.cvtColor(img, cv2.COLOR_RGB2LAB))[:, :, 0]
@@ -45,6 +65,11 @@ class PreprocessingPipeline:
         return sbinary
 
     def dir_threshold(self, img):
+        """
+         Calculates the directional gradients
+        :param img: input image
+        :return: thresholded image
+        """
         # Apply the following steps to img
         # 1) Convert to grayscale
         gray = (cv2.cvtColor(img, cv2.COLOR_RGB2LAB))[:, :, 0]
